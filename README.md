@@ -124,6 +124,29 @@ The JSON payload shape:
 
 ---
 
+## Live Test — Recon Detection (2 → 3 Alerts)
+
+**Objective:** Simulate post-exploit enumeration and confirm GeoDefend detects the pattern change in real time.
+
+**Setup:** Process creation auditing enabled via `auditpol`. Recon command sequence executed on the target machine. Scanner re-run. App refreshed over LAN.
+
+| Recon Detected (Findings) | Dashboard — 3 Critical Alerts |
+|:-------------------------:|:-----------------------------:|
+| ![Test recce — findings screen showing recon alert](DOCUMENTATION/TEST_RECCE.jpg) | ![Dashboard — 3 critical alerts](DOCUMENTATION/TEST_RECCE_DASH.png) |
+
+**What changed:**
+
+| State | Alerts | Trigger |
+|-------|--------|---------|
+| Baseline | 2 | Platform version below minimum + process auditing disabled |
+| After recon simulation | 3 | `whoami`, `net user`, `ipconfig`, `tasklist`, `systeminfo` sequence detected in Security event log (EID 4688) |
+
+Check 4 fires when multiple recon commands appear in the event log within a short window — the pattern of an attacker who just landed on a box and is enumerating their environment. Single commands do not trigger it; the sequence does.
+
+> *"Can't really 0day myself but we'll run a recon command to see if the mobile app shows results."*
+
+---
+
 ## Setup
 
 ### Prerequisites
