@@ -43,6 +43,9 @@ app-backup/
 WD_LPE_Latest.json
 WD_LPE_Detect_*.txt
 
+# Claude Code working directory
+.claude/
+
 # generated native folders
 /ios
 /android
