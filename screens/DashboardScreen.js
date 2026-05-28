@@ -11,7 +11,7 @@ export default function DashboardScreen({ navigation }) {
   const loadScan = async () => {
     try {
       setLoading(true);
-      const response = await fetch(SCAN_URL);
+      const response = await fetch(`${SCAN_URL}?t=${Date.now()}`);
       const json = await response.json();
       setData(json);
     } catch (e) {
