@@ -5,6 +5,7 @@ import { IconButton, Provider as PaperProvider } from "react-native-paper";
 
 import DashboardScreen from "./screens/DashboardScreen";
 import FindingsScreen from "./screens/FindingsScreen";
+import LocationScreen from "./screens/LocationScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 
 const Tab = createBottomTabNavigator();
@@ -70,6 +71,16 @@ export default function App() {
             component={DashboardStack}
             options={{ headerShown: false }}
           />
+
+          <Tab.Screen
+            name="Location"
+            component={LocationScreen}
+            options={{
+              headerStyle: { backgroundColor: "#0a0a0a" },
+              headerTintColor: "#00ff41",
+            }}
+          />
+
           <Tab.Screen
             name="Settings"
             component={SettingsScreen}
