@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Provider as PaperProvider } from "react-native-paper";
+import { IconButton, Provider as PaperProvider } from "react-native-paper";
 
 import DashboardScreen from "./screens/DashboardScreen";
 import FindingsScreen from "./screens/FindingsScreen";
@@ -21,12 +21,33 @@ function DashboardStack() {
       <Stack.Screen
         name="DashboardHome"
         component={DashboardScreen}
-        options={{ title: "GeoDefend" }}
+        options={({ navigation }) => ({
+          title: "GeoDefend",
+          headerRight: () => (
+            <IconButton
+              icon="cog-outline"
+              size={24}
+              iconColor="#00ff41"
+              onPress={() => navigation.navigate("Settings")}
+            />
+          ),
+        })}
       />
+
       <Stack.Screen
         name="Findings"
         component={FindingsScreen}
-        options={{ title: "Findings" }}
+        options={({ navigation }) => ({
+          title: "Findings",
+          headerRight: () => (
+            <IconButton
+              icon="cog-outline"
+              size={24}
+              iconColor="#00ff41"
+              onPress={() => navigation.navigate("Settings")}
+            />
+          ),
+        })}
       />
     </Stack.Navigator>
   );
