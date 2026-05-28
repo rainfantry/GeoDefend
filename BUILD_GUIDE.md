@@ -356,3 +356,104 @@ Scan the QR code with Expo Go on your phone. Both devices need to be on the same
 | File blanks out on save | Turn off format-on-save: `"editor.formatOnSave": false` in VS Code settings |
 | Fetch works in browser but not on phone | Use LAN IP not `localhost` — phone can't resolve your machine's localhost |
 | PS1 self-destructs | `$jsonpath` pointed to the PS1 itself — double-check the path before running |
+
+---
+
+## CONTINUATION — Dashboard Button + FindingsScreen Build
+
+### STEP A — Add Button + Loading indicator to DashboardScreen
+
+In DashboardScreen.js, underneath the CRITICAL ALERTS `<Text>`, we add an ActivityIndicator (spinner while loading) and a Button that navigates to FindingsScreen.
+
+The button uses `navigation.navigate("Findings"` — `"Findings"` is the screen name we defined in App.js Stack.Navigator. The second argument bundles `findings` and `alertCount` as a data parcel so FindingsScreen can pick them up via `route.params.findings`.
+
+```javascript
+{loading && (
+  <ActivityIndicator color="#00ff41" style={{ marginTop: 20 }} />
+)}
+
+<Button
+  mode="contained"
+  buttonColor="#00ff41"
+  textColor="#0a0a0a"
+  style={{ marginTop: 20 }}
+  onPress={() =>
+    navigation.navigate("Findings", {
+      findings: data?.findings,
+      alertCount: data?.alertCount,
+    })
+  }
+>
+  VIEW FINDINGS
+</Button>
+```
+
+Update imports at the top to include `Button` and `ActivityIndicator`:
+```javascript
+import { ActivityIndicator, Button, Text } from "react-native-paper";
+```
+
+---
+
+### STEP B — Build FindingsScreen.js
+
+For the findings screen we output the JSON but colour-code each alert to differentiate by category — ALERT, WARN, INFO, OK.
+
+We import `Card` alongside `Text` so each alert has its own box. We import `ScrollView` to make the screen scrollable.
+
+We address the possibility of no findings by using `findings = []` as a default — gives it an empty array if nothing comes through.
+
+The `??` (nullish coalescing operator) on `route.params` handles the case where someone opens FindingsScreen without navigating from Dashboard — without it, destructuring `null` would crash.
+
+`levelColor` is defined twice per card deliberately — once for the left border colour, once for the label text colour.
+
+```javascript
+import { ScrollView } from "react-native";
+import { Card, Text } from "react-native-paper";
+
+export default function FindingsScreen({ route }) {
+  const { findings = [], alertCount } = route.params ?? {};
+
+  const levelColor = (level) => {
+    if (level === "ALERT") return "#ff4444";   // red
+    if (level === "WARN")  return "#ffaa00";   // yellow
+    if (level === "INFO")  return "#00aaff";   // blue
+    return "#00ff41";                          // green (OK)
+  };
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0a", padding: 16 }}>
+      <Text variant="titleMedium" style={{ color: "#888", marginBottom: 16 }}>
+        {alertCount} critical alert(s)
+      </Text>
+
+      {findings.map((item, index) => (
+        <Card
+          key={index}
+          style={{
+            marginBottom: 10,
+            backgroundColor: "#1a1a1a",
+            borderLeftWidth: 4,
+            borderLeftColor: levelColor(item.level),
+          }}
+        >
+          <Card.Content>
+            <Text
+              variant="labelSmall"
+              style={{ color: levelColor(item.level), fontWeight: "bold" }}
+            >
+              {item.level} - {item.time}
+            </Text>
+            <Text
+              variant="bodyMedium"
+              style={{ color: "#e0e0e0", marginTop: 4 }}
+            >
+              {item.message}
+            </Text>
+          </Card.Content>
+        </Card>
+      ))}
+    </ScrollView>
+  );
+}
+```

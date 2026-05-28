@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
-import { Text } from "react-native-paper";
+import { ActivityIndicator, Button, Text } from "react-native-paper";
 
 export default function DashboardScreen({ navigation }) {
   const [data, setData] = useState(null);
@@ -50,6 +50,24 @@ export default function DashboardScreen({ navigation }) {
       >
         CRITICAL ALERTS
       </Text>
+      {loading && (
+        <ActivityIndicator color="#00ff41" style={{ marginTop: 20 }} />
+      )}
+
+      <Button
+        mode="contained"
+        buttonColor="#00ff41"
+        textColor="#0a0a0a"
+        style={{ marginTop: 20 }}
+        onPress={() =>
+          navigation.navigate("Findings", {
+            findings: data?.findings,
+            alertCount: data?.alertCount,
+          })
+        }
+      >
+        VIEW FINDINGS
+      </Button>
     </ScrollView>
   );
 }

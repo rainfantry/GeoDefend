@@ -4,6 +4,10 @@
 
 GeoDefend is a React Native mobile app that consumes the output of `WD_LPE_Detect.ps1` — a PowerShell scanner built to detect active indicators of compromise for a class of Windows Defender Local Privilege Escalation (LPE) exploits. Run the scanner on your Windows machine, serve the output over LAN, read the results on your phone in real time.
 
+| Dashboard | Findings |
+|:---------:|:--------:|
+| ![Dashboard — alert count display](DOCUMENTATION/DASHBOARD.jpg) | ![Findings — colour-coded alert cards](DOCUMENTATION/FINDINGS.jpg) |
+
 ---
 
 ## Why This Exists
