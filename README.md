@@ -237,3 +237,16 @@ CVE-2020-17103 (MiniPlasma root vulnerability) originally discovered and reporte
 ---
 
 *Blue team. For educational and defensive use only.*
+
+---
+
+## TODO — Release Blackops
+
+_Automated read-only assessment — what a full public-release pass would do for this repo. Suggestions only; nothing above has been changed or removed._
+
+- [ ] **AI/Claude attribution detected in git history — scrub it** (`filter-branch` + force-push; nuke-and-recreate if a 0-star/0-fork repo and the orphaned SHA lingers).
+- [ ] Add discovery topics for SEO (`gh repo edit --add-topic ...`, up to 20).
+- [ ] Cut a tagged release (`v1.0.0`); attach a build artifact if this ships a binary/app.
+- [ ] Verify a clean from-scratch build/run against the README quick start (produce a real artifact, don't trust the docs).
+
+<sub>Workflow: https://github.com/rainfantry/release-blackops-skill</sub>
