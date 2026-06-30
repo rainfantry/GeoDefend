@@ -149,6 +149,46 @@ Check 4 fires when multiple recon commands appear in the event log within a shor
 
 ## Setup
 
+### Python Scanners (New)
+
+GeoDefend now includes two Python scanners for offline backdoor and persistence detection:
+
+```bash
+# Run both scanners
+python scan.py
+
+# Or run individually
+python scanners/geodefend_code_scan.py [target_directory]
+python scanners/geodefend_host_scan.py
+```
+
+`geodefend_code_scan.py` statically inspects Python files for:
+- External C2 IPs/domains
+- Crypto wallet injection (`app.asar` replacement)
+- Process injection APIs
+- Registry / scheduled task persistence
+- Hidden PowerShell execution
+- Startup folder access
+- WMI persistence
+- Browser process termination
+- Real browser profile access
+- Self-restart / mutex logic
+- Silent pip installs
+- Obfuscated payloads
+- Raw external network libraries
+
+`geodefend_host_scan.py` checks the local Windows machine for:
+- Suspicious HKCU/HKLM `Run` / `RunOnce` keys
+- Startup folder scripts
+- Suspicious scheduled tasks
+- Suspicious services
+- WMI persistence subscriptions
+- Active connections to known malware IPs/domains
+
+Both scanners are read-only and safe to run on any machine.
+
+### React Native App
+
 ### Prerequisites
 - Windows machine with Windows Defender enabled
 - Python 3 (built into Windows 11)
@@ -194,15 +234,20 @@ Scan the QR code with Expo Go. Dashboard loads and fetches the latest scan resul
 
 ```
 GeoDefend/
-├── App.js                  Navigation shell (bottom tabs + stack)
-├── index.js                Entry point — registerRootComponent
-├── WD_LPE_Detect.ps1       Scanner — run as Admin on Windows machine
-├── BUILD_GUIDE.md          Full step-by-step build log
+├── App.js                              Navigation shell (bottom tabs + stack)
+├── index.js                            Entry point — registerRootComponent
+├── scan.py                             Convenience wrapper: runs both scanners
+├── scanners/
+│   ├── geodefend_code_scan.py          Static Python backdoor/malware indicator scanner
+│   ├── geodefend_host_scan.py          Windows persistence artifact scanner
+│   └── GEODEFEND_VERIFICATION.md       Verification report template
+├── WD_LPE_Detect.ps1                   Scanner — run as Admin on Windows machine
+├── BUILD_GUIDE.md                      Full step-by-step build log
 ├── screens/
-│   ├── DashboardScreen.js  Alert count display, fetch logic
-│   ├── FindingsScreen.js   Findings list grouped by level (in progress)
-│   └── SettingsScreen.js   Server IP config (in progress)
-└── package.json            "main": "index.js" — required for SDK 54
+│   ├── DashboardScreen.js              Alert count display, fetch logic
+│   ├── FindingsScreen.js               Findings list grouped by level (in progress)
+│   └── SettingsScreen.js               Server IP config (in progress)
+└── package.json                        "main": "index.js" — required for SDK 54
 ```
 
 **Why `index.js` exists:** Expo SDK 54 scaffolds with Expo Router by default (`"main": "expo-router/entry"`). This project uses the traditional App.js pattern. `index.js` + `registerRootComponent` + `"main": "index.js"` in package.json overrides the router entry point.
