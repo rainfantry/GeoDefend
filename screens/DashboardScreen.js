@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { ScrollView } from "react-native";
-import { ActivityIndicator, Button, Text } from "react-native-paper";
+import { ScrollView, View } from "react-native";
+import { ActivityIndicator, Button, Text, Chip } from "react-native-paper";
 
 export default function DashboardScreen({ navigation }) {
   const [data, setData] = useState(null);
@@ -24,6 +24,14 @@ export default function DashboardScreen({ navigation }) {
     loadScan();
   }, []);
 
+  // Categorise findings by keyword
+  const lpeAlerts = data?.findings?.filter((f) =>
+    /defender|wd lpe|system-owned|recon|vss|definition/i.test(f.message)
+  ) || [];
+  const malwareAlerts = data?.findings?.filter((f) =>
+    /infostealer|marsalek|wallet|ghost\.ps1|svc\.py|r\.vbs|hd realtek|startup script|suspicious run key|hidden powershell/i.test(f.message)
+  ) || [];
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0a", padding: 20 }}>
       <Text
@@ -34,11 +42,18 @@ export default function DashboardScreen({ navigation }) {
       </Text>
 
       <Text
+        variant="titleMedium"
+        style={{ color: "#888", textAlign: "center", marginBottom: 20 }}
+      >
+        {data?.host ?? "-"} | {data?.timestamp?.split("T")[0] ?? ""}
+      </Text>
+
+      <Text
         variant="displayLarge"
         style={{
           color: data?.alertCount > 0 ? "#ff4444" : "#00ff41",
           textAlign: "center",
-          marginTop: 40,
+          marginTop: 10,
         }}
       >
         {data?.alertCount ?? "-"}
@@ -46,10 +61,20 @@ export default function DashboardScreen({ navigation }) {
 
       <Text
         variant="titleMedium"
-        style={{ color: "#888", textAlign: "center", marginBottom: 40 }}
+        style={{ color: "#888", textAlign: "center", marginBottom: 20 }}
       >
-        CRITICAL ALERTS
+        TOTAL ALERTS
       </Text>
+
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 10, marginBottom: 20 }}>
+        <Chip style={{ backgroundColor: "#1a1a1a" }} textStyle={{ color: lpeAlerts.length ? "#ffaa00" : "#00ff41" }}>
+          WD LPE: {lpeAlerts.length}
+        </Chip>
+        <Chip style={{ backgroundColor: "#1a1a1a" }} textStyle={{ color: malwareAlerts.length ? "#ff4444" : "#00ff41" }}>
+          Malware: {malwareAlerts.length}
+        </Chip>
+      </View>
+
       {loading && (
         <ActivityIndicator color="#00ff41" style={{ marginTop: 20 }} />
       )}
@@ -58,7 +83,7 @@ export default function DashboardScreen({ navigation }) {
         mode="contained"
         buttonColor="#00ff41"
         textColor="#0a0a0a"
-        style={{ marginTop: 20 }}
+        style={{ marginTop: 10 }}
         onPress={() =>
           navigation.navigate("Findings", {
             findings: data?.findings,
@@ -66,7 +91,7 @@ export default function DashboardScreen({ navigation }) {
           })
         }
       >
-        VIEW FINDINGS
+        VIEW ALL FINDINGS
       </Button>
     </ScrollView>
   );

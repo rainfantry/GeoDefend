@@ -1,6 +1,7 @@
 # ============================================================
 # WD_LPE_Detect.ps1
 # Blue team detection script - BlueHammer/RedSun/UnDefend IOCs
+# + 22DIV infostealer malware IOCs (wallet hijack, persistence, C2)
 # George Wu | For educational/defensive use only
 # Run as Administrator for full results
 # ============================================================
@@ -15,7 +16,6 @@ function Write-Alert {
     $line = "[$level] $msg"
     Write-Host $line -ForegroundColor $colour
     $script:findings += $line
-# ADDED LINE - REPEAT FOR INFO + OK FUNCTION REPLACING LEVEL WITH (INFO) & (OK) RESPECTIVELY
     $script:structured += [PSCustomObject]@{ level = $level; message = $msg; time = (Get-Date -Format 'HH:mm:ss') }
     if ($level -eq "ALERT") { $script:alertcount++ }
 }
@@ -48,12 +48,12 @@ function Write-Section {
 # ============================================================
 Clear-Host
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "   WD LPE DETECTION SCRIPT - George Wu           " -ForegroundColor Cyan
-Write-Host "   BlueHammer / RedSun / UnDefend IOC Scanner    " -ForegroundColor Cyan
+Write-Host "   WD LPE + INFOSTEALER IOC DETECTION SCRIPT    " -ForegroundColor Cyan
+Write-Host "   BlueHammer / RedSun / UnDefend / 22DIV       " -ForegroundColor Cyan
 Write-Host "   Blue team use only. Run as Administrator.     " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
-$findings += "WD LPE Detection Script | Run: $(Get-Date)"
+$findings += "WD LPE + Infostealer Detection Script | Run: $(Get-Date)"
 $findings += "Host: $env:COMPUTERNAME | User: $env:USERNAME"
 
 # ============================================================
@@ -173,7 +173,6 @@ try {
 
 # ============================================================
 # CHECK 4 - POST-EXPLOIT RECON COMMANDS IN EVENT LOG
-# Huntress documented this exact sequence post-exploit
 # ============================================================
 Write-Section "CHECK 4: POST-EXPLOIT RECON COMMANDS IN EVENT LOG"
 
@@ -261,6 +260,143 @@ try {
 } catch {
     Write-Info "Could not check definition health: $_"
 }
+
+# ============================================================
+# CHECK 7 - INFOSTEALER MALWARE IOCs
+# Detects persistence, C2, and wallet-hijack indicators
+# from the 22DIV analyzed dropper family
+# ============================================================
+Write-Section "CHECK 7: INFOSTEALER MALWARE IOCs"
+
+$malware_iocs = @{
+    "C2_DOMAINS" = @("marsalek.cy")
+    "C2_IPS" = @("113.30.148.162", "46.120.173.142")
+    "WALLET_ENDPOINTS" = @("/exodus", "/atomic")
+    "PERSISTENCE_MARKERS" = @("HD Realtek Audio Player", "ghost.ps1", "svc.py", "r.vbs")
+    "PROCESS_NAMES" = @("exodus.exe", "Atomic Wallet.exe")
+}
+
+# 7a - Hosts file hijacking / known C2 domains
+$hostsfile = "$env:SystemRoot\System32\drivers\etc\hosts"
+if (Test-Path $hostsfile) {
+    $hostcontent = Get-Content $hostsfile -Raw
+    foreach ($domain in $malware_iocs["C2_DOMAINS"]) {
+        if ($hostcontent -match $domain) {
+            Write-Alert "hosts file references known malware C2 domain: $domain" "Red" "ALERT"
+        }
+    }
+}
+
+# 7b - Network connections to known C2 IPs
+$netconns = @()
+try {
+    $netconns = Get-NetTCPConnection -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, State
+} catch {}
+
+$found_c2_conn = $false
+foreach ($conn in $netconns) {
+    if ($malware_iocs["C2_IPS"] -contains $conn.RemoteAddress) {
+        Write-Alert "Active connection to known malware IP: $($conn.RemoteAddress):$($conn.RemotePort) [$($conn.State)]" "Red" "ALERT"
+        $found_c2_conn = $true
+    }
+}
+if (-not $found_c2_conn) {
+    Write-OK "No active connections to known infostealer C2 IPs"
+}
+
+# 7c - Persistence: Run keys
+$run_paths = @(
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+)
+$found_persistence = $false
+foreach ($rp in $run_paths) {
+    if (Test-Path $rp) {
+        $values = Get-ItemProperty $rp -ErrorAction SilentlyContinue
+        foreach ($marker in $malware_iocs["PERSISTENCE_MARKERS"]) {
+            $matches = $values.PSObject.Properties | Where-Object { $_.Value -and $_.Value.ToString() -match $marker }
+            foreach ($m in $matches) {
+                Write-Alert "Suspicious Run key '$($m.Name)' in $rp -> $($m.Value)" "Red" "ALERT"
+                $found_persistence = $true
+            }
+        }
+        # Also flag hidden PowerShell execution
+        $hidden = $values.PSObject.Properties | Where-Object { $_.Value -and $_.Value.ToString() -match "powershell\.exe.*-WindowStyle\s+Hidden" }
+        foreach ($h in $hidden) {
+            Write-Alert "Hidden PowerShell persistence '$($h.Name)' in $rp" "Red" "ALERT"
+            $found_persistence = $true
+        }
+    }
+}
+if (-not $found_persistence) {
+    Write-OK "No infostealer persistence markers in Run/RunOnce keys"
+}
+
+# 7d - Startup folder scripts
+$startup_path = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
+if (Test-Path $startup_path) {
+    $startup_files = Get-ChildItem $startup_path -ErrorAction SilentlyContinue
+    $sus_startup = $startup_files | Where-Object { $_.Extension -in @(".ps1",".vbs",".bat",".cmd",".js") }
+    if ($sus_startup) {
+        foreach ($sf in $sus_startup) {
+            Write-Alert "Suspicious startup script: $($sf.FullName)" "Red" "ALERT"
+        }
+    } else {
+        Write-OK "No suspicious scripts in user startup folder"
+    }
+}
+
+# 7e - File system markers
+$marker_paths = @(
+    "$env:LOCALAPPDATA\HD Realtek Audio Player",
+    "$env:TEMP\svc.py",
+    "$env:TEMP\r.vbs",
+    "$env:APPDATA\Microsoft\Windows\ghost.ps1"
+)
+$found_marker = $false
+foreach ($mp in $marker_paths) {
+    if (Test-Path $mp) {
+        Write-Alert "Infostealer artifact found: $mp" "Red" "ALERT"
+        $found_marker = $true
+    }
+}
+if (-not $found_marker) {
+    Write-OK "No infostealer file-system artifacts detected"
+}
+
+# 7f - Wallet app.asar tampering
+$wallet_paths = @(
+    "$env:LOCALAPPDATA\exodus\app-*\resources\app.asar",
+    "$env:LOCALAPPDATA\atomic\app-*\resources\app.asar"
+)
+$found_wallet_tamper = $false
+foreach ($wp in $wallet_paths) {
+    $matches = Get-Item $wp -ErrorAction SilentlyContinue
+    foreach ($m in $matches) {
+        # A quick heuristic: app.asar should be large; tiny replacement is suspicious
+        if ($m.Length -lt 100KB) {
+            Write-Alert "Possible tampered wallet app.asar (tiny size): $($m.FullName) ($($m.Length) bytes)" "Red" "ALERT"
+            $found_wallet_tamper = $true
+        }
+    }
+}
+if (-not $found_wallet_tamper) {
+    Write-OK "No wallet app.asar tampering detected"
+}
+
+# 7g - Suspicious processes
+$found_susp_proc = $false
+try {
+    $procs = Get-Process -ErrorAction SilentlyContinue | Select-Object Name, Path
+    foreach ($pn in $malware_iocs["PROCESS_NAMES"]) {
+        $matches = $procs | Where-Object { $_.Name -eq $pn -or $_.Path -match $pn }
+        if ($matches) {
+            Write-Info "Wallet process running: $pn (expected if user has wallet installed)"
+        }
+    }
+} catch {}
 
 # ============================================================
 # SUMMARY
